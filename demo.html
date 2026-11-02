@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f7fb">
+  <title>DreamVu — Safety Studio</title>
+  <link rel="stylesheet" href="demo/style.css">
+  <script defer src="demo/catalog.js"></script><script defer src="demo/zone-evaluator.js"></script><script defer src="demo/app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="demo.html" aria-label="DreamVu Safety Studio home">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17"/><ellipse cx="20" cy="20" rx="9" ry="17"/><path d="M3 20h34"/><circle cx="20" cy="20" r="4" class="pupil"/></svg>
+      <strong>DreamVu</strong><span class="brand-divider"></span><span>Safety Studio</span>
+    </a>
+    <span class="archive-link">Interactive capability demos</span>
+  </header>
+  <main class="library" id="library">
+    <div class="intro">
+      <h1>Safety, seen from<br>every angle.</h1>
+      <div class="intro-copy"><p>Real scenes. A closer look at human awareness.</p><p>Choose a video, switch on what matters, and explore what the camera sees.</p><span class="recorded-label"><i></i> Recorded demonstrations</span></div>
+    </div>
+    <div class="collection-bar"><h2>Explore the scenes</h2><span id="scene-count"></span></div>
+    <nav class="filters" aria-label="Filter scenes">
+      <button class="filter active" data-filter="all" aria-pressed="true">All scenes</button>
+      <button class="filter" data-filter="surround" aria-pressed="false">360° awareness</button>
+      <button class="filter" data-filter="workplace" aria-pressed="false">Workplace safety</button>
+      <button class="filter" data-filter="body" aria-pressed="false">Body &amp; movement</button>
+      <button class="filter" data-filter="system" aria-pressed="false">System reliability</button>
+    </nav>
+    <div id="scene-grid" class="scene-grid"></div>
+    <div class="library-footer"><div><strong>One scene. Many ways to understand it.</strong><p>Every switch controls a separate visual layer on the same recording.</p></div></div>
+    <details class="about"><summary>About these demonstrations</summary><p>These are saved model outputs played over recorded footage, not a live camera feed. The models remain prototypes: missed detections, uncertain posture and identity changes can occur. Distance colors use apparent body size; no calibrated distance or Orin real-time performance is claimed. Event logging and feed health are integration views for the core platform.</p><div id="credits"></div></details>
+  </main>
+  <footer class="site-footer"><span>DreamVu · Human safety</span><span>Built for a view of the whole scene.</span></footer>
+
+  <dialog id="studio" class="studio" aria-labelledby="scene-title">
+    <div class="studio-top"><button id="close-studio" class="back-button" aria-label="Close scene and return to library"><span aria-hidden="true">←</span> All scenes</button><div><h2 id="scene-title"></h2><p id="scene-subtitle"></p></div><span id="scene-format" class="format-pill"></span></div>
+    <div class="studio-layout">
+      <section class="experience" aria-label="Interactive video">
+        <div class="player-shell">
+          <div class="player-top"><span class="replay-indicator"><i></i> Recorded replay</span><span id="player-count" class="player-count" hidden></span><span id="mode-label">Panorama</span><button id="fullscreen" class="icon-button" title="Expand video" aria-label="Expand video">⛶</button></div>
+          <div class="picture" id="picture">
+            <video id="source-video" muted playsinline preload="metadata" tabindex="-1" aria-hidden="true"></video>
+            <canvas id="scene-canvas" width="1280" height="640" tabindex="0" aria-label="Video with interactive person overlays. Click a person to inspect them."></canvas>
+            <div id="loading" class="loading"><span class="loading-ring"></span><strong>Opening the scene</strong><span>Loading video and observations…</span></div>
+            <div id="video-error" class="video-error" hidden><strong>This scene could not load.</strong><p id="error-message"></p><button id="retry-scene">Try again</button></div>
+          </div>
+          <div class="transport">
+            <div class="seek-wrap"><div id="event-markers" aria-hidden="true"></div><input id="seek" type="range" min="0" max="100" step="0.01" value="0" aria-label="Video position"></div>
+            <div class="transport-row"><button id="play" class="play-button" aria-label="Play video">▶</button><button id="restart" class="icon-button" aria-label="Restart video" title="Restart">↺</button><span id="time-label">0:00 / 0:00</span><span class="transport-spacer"></span><button id="highlight" class="compare-button highlight-button" title="Jump to the selected example moment">Highlight</button><label class="speed-label">Speed <select id="speed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><button id="raw-button" class="compare-button" aria-pressed="false">Clean video</button></div>
+          </div>
+        </div>
+        <div class="video-caption"><span id="scene-purpose"></span><span class="click-hint">Click a person to inspect</span></div>
+        <div id="proximity-legend" class="proximity-legend" hidden><strong>Apparent proximity</strong><span><i class="near"></i>Larger / nearer estimate</span><span><i class="mid"></i>Medium</span><span><i class="far"></i>Smaller / farther estimate</span><button id="proximity-info" aria-expanded="false" aria-controls="proximity-note" title="How proximity is estimated">ⓘ</button></div>
+        <p id="proximity-note" class="explanation" hidden>Color is based on angular body size, not measured distance. A larger visible body is usually closer, but posture, body height and occlusion affect this estimate. No distances in meters are available for these clips.</p>
+        <div id="zone-editor" class="zone-editor" hidden><div><strong id="zone-editor-title">Define a zone</strong><p id="zone-editor-note">Draw a polygon on the video to evaluate the observed feet.</p></div><div class="zone-editor-actions"><button id="draw-zone">Draw zone</button><button id="finish-zone" hidden>Use this zone</button><button id="cancel-zone" hidden>Cancel</button><button id="clear-zone" hidden>Reset zone</button></div></div>
+        <div class="evidence-row">
+          <section class="insight-panel" id="insight-panel" aria-label="Current scene observations"><div class="panel-heading"><h3>In this moment</h3><span id="evidence-time"></span></div><div id="insights"></div><div id="person-chips" class="person-chips" aria-label="Inspect a tracked person"></div></section>
+          <section id="radar-panel" class="radar-panel" aria-label="Direction map"><div class="panel-heading"><h3>Around the camera</h3><span>360°</span></div><canvas id="radar" width="400" height="280" aria-label="People arranged by bearing; radius is an apparent-size proxy"></canvas><p>Direction from the camera. Radius uses apparent size.</p></section>
+        </div>
+        <section id="events-panel" class="event-panel"><div class="panel-heading"><h3>Moments worth a closer look</h3><span id="event-count"></span></div><div id="event-list"></div></section>
+        <div class="source-note"><span id="source-credit"></span><details><summary>Observation notes</summary><p id="scene-limits"></p><p>Playback speed is independent of inference speed. This is an offline prototype demonstration.</p></details></div>
+      </section>
+      <aside class="controls-rail" id="scene-controls" aria-label="Scene controls">
+        <button id="close-layers" class="mobile-close-layers" aria-label="Close layer controls">Back to video <span aria-hidden="true">↓</span></button>
+        <div class="rail-heading"><div><h3>Make the scene yours.</h3><p>Every capability. Your choice of layers.</p></div><button id="reset-layers" class="text-button">Reset</button></div>
+        <div class="layer-count"><span id="active-layer-count"></span><span id="available-layer-count"></span></div>
+        <div id="layer-list"></div>
+        <section class="person-inspector" id="person-inspector"><div class="inspector-idle"><span class="target-icon" aria-hidden="true">⌖</span><h3>Follow one person.</h3><p>Select a marker in the video or a person below it to see their observations.</p></div></section>
+        <div class="rail-note"><span class="tiny-dot"></span>Switches change the visualization.<br>The recorded model results stay the same.</div>
+      </aside>
+    </div>
+    <button id="mobile-layers" class="mobile-layers" aria-expanded="false" aria-controls="scene-controls">Adjust layers <span id="mobile-layer-count"></span></button>
+  </dialog>
+</body>
+</html>
