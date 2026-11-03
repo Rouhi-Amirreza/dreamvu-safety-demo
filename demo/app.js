@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const catalog = window.DREAMVU_CATALOG;
+  const catalog = window.DREAMVU_CATALOG.filter(scene => !scene.hidden);
   const layers = {
     detection: ['Person detection', 'Outlines and detection confidence'],
     tracking: ['Person tracking', 'Persistent IDs and recent paths'],
@@ -13,7 +13,6 @@
     helmet: ['Helmet checks', 'Helmet, no helmet, or uncertain'],
     approach: ['Approach direction', 'Movement inferred from apparent size'],
     zones: ['Zone presence', 'Zone occupancy, entry and exit'],
-    fall: ['Fall & person-down', 'Falls, floor episodes and stillness'],
     ground: ['360° floor geometry', 'Floor consistency from body rays'],
     events: ['Event replay', 'Recorded events from enabled layers'],
     health: ['Observation freshness', 'Age, interruption and recovery'],
@@ -88,7 +87,7 @@
       const cols=data.views.length===4?2:Math.min(3,data.views.length), tile=Math.floor(1280/cols);
       displayTiles=Object.fromEntries(data.views.map((v,j)=>[v.id,[(j%cols)*tile,Math.floor(j/cols)*tile,tile,tile]]));
       viewHeight=Math.ceil(data.views.length/cols)*tile;
-      enabled=new Set(chosen.defaults.filter(k=>data.available.includes(k)));
+      enabled=new Set(chosen.defaults.filter(k=>visibleLayers().includes(k)&&data.available.includes(k)));
       renderLayers();$('seek').max=data.duration;
       $('highlight').textContent=`Highlight ${clock(Math.min(chosen.moment,data.duration))}`;
       video.src=`demo/assets/${id}/clean.mp4`;video.poster=`demo/assets/${id}/poster.jpg`;video.load();
@@ -128,7 +127,7 @@
   function unavailableReason(k){if(['views','ground'].includes(k)&&data?.projection==='planar')return 'Requires a 360° recording; this clip is 2D.';return 'Full capability analysis has not loaded for this recording.';}
   function renderLayers() {
     $('layer-list').innerHTML=visibleLayers().map(k=>{const available=data.available.includes(k);return `<button class="layer-toggle" role="switch" aria-checked="${enabled.has(k)}" aria-label="${escape(layers[k][0])}" data-layer="${k}" ${available?'':`disabled title="${escape(unavailableReason(k))}"`}><span class="layer-copy"><strong>${escape(layers[k][0])}</strong><small>${escape(available?layers[k][1]:unavailableReason(k))}</small></span><span class="switch" aria-hidden="true"></span></button>`;}).join('');
-    $('available-layer-count').textContent=`${data.available.length} available · ${visibleLayers().length} total`;
+    $('available-layer-count').textContent=`${visibleLayers().filter(k=>data.available.includes(k)).length} available · ${visibleLayers().length} total`;
     syncLayerState();
   }
   function syncLayerState(){
@@ -149,8 +148,8 @@
     if(data)renderEvents();
   }
   $('layer-list').addEventListener('click',e=>{const b=e.target.closest('[data-layer]');if(!b||b.disabled)return;const k=b.dataset.layer;enabled.has(k)?enabled.delete(k):enabled.add(k);savedLayers=null;syncLayerState();draw();updateUI(true);});
-  $('reset-layers').addEventListener('click',()=>{if(!data)return;enabled=new Set(scene.defaults.filter(k=>data.available.includes(k)));savedLayers=null;syncLayerState();draw();updateUI(true);});
-  $('raw-button').addEventListener('click',()=>{if(!data)return;if(enabled.size){savedLayers=new Set(enabled);enabled.clear();}else{enabled=savedLayers||new Set(scene.defaults.filter(k=>data.available.includes(k)));savedLayers=null;}syncLayerState();draw();updateUI(true);});
+  $('reset-layers').addEventListener('click',()=>{if(!data)return;enabled=new Set(scene.defaults.filter(k=>visibleLayers().includes(k)&&data.available.includes(k)));savedLayers=null;syncLayerState();draw();updateUI(true);});
+  $('raw-button').addEventListener('click',()=>{if(!data)return;if(enabled.size){savedLayers=new Set(enabled);enabled.clear();}else{enabled=savedLayers||new Set(scene.defaults.filter(k=>visibleLayers().includes(k)&&data.available.includes(k)));savedLayers=null;}syncLayerState();draw();updateUI(true);});
   $('proximity-info').addEventListener('click',()=>{const show=$('proximity-note').hidden;$('proximity-note').hidden=!show;$('proximity-info').setAttribute('aria-expanded',show);});
 
   function activeZones(){return customZone?[customZone]:(data?.zones||[]);}
@@ -299,7 +298,7 @@
     if(p.helmet)entries.push(['Helmet',{worn:'On',missing:'Not detected',unknown:'Uncertain'}[p.helmet.label]||'Uncertain']);
     if(p.motion?.range_trend)entries.push(['Movement',p.motion.range_trend]);
     if(activeZones().length)entries.push(['Zone',isInside(p)?'Inside':Object.values(personZones(p)).some(z=>z.inside===null)?'Uncertain':'Outside']);
-    if(p.fall)entries.push(['Floor state',p.fall.state],['Stillness',`${Number(p.fall.still_s||0).toFixed(1)} s`]);
+    if(enabled.has('fall')&&p.fall)entries.push(['Floor state',p.fall.state],['Stillness',`${Number(p.fall.still_s||0).toFixed(1)} s`]);
     if(p.ground)entries.push(['Floor geometry',p.ground.verdict||'Not established']);
     $('person-inspector').innerHTML=`<div class="person-heading"><h3>Person ${escape(label(p.id))}</h3><button data-clear-person aria-label="Clear selected person">×</button></div><p class="observed-state ${p.held?'held':''}">${p.held?'Last observation briefly retained':'Observed in this frame'}</p><dl>${entries.map(([a,b])=>`<dt>${escape(a)}</dt><dd>${escape(b)}</dd>`).join('')}</dl><p class="inspector-note">Identity is a tracking label, not facial recognition.${p.size!=null?' Apparent size does not establish metric distance.':''}</p>`;
   }
