@@ -61,7 +61,7 @@
     if (window.DREAMVU_DATA?.[id]) return Promise.resolve(window.DREAMVU_DATA[id]);
     if(cache.has(id))return cache.get(id);
     const promise=new Promise((resolve,reject)=>{
-      const script=document.createElement('script');script.src=`demo/assets/${id}/data.js?v=hosted-1`;
+      const script=document.createElement('script');script.src=`demo/assets/${id}/data.js?v=person-verification-beb3f603307b`;
       script.onload=async()=>{try{const sceneData=window.DREAMVU_DATA?.[id];if(!sceneData)throw new Error('Scene observations are missing.');for(const file of sceneData.frameScripts||[]){await new Promise((done,fail)=>{const chunk=document.createElement('script');chunk.src=`demo/assets/${id}/${file}`;chunk.onload=done;chunk.onerror=()=>fail(new Error('Could not load scene observations. Please reload and try again.'));document.head.appendChild(chunk);});}resolve(sceneData);}catch(error){cache.delete(id);delete window.DREAMVU_DATA[id];reject(error);}};
       script.onerror=()=>{cache.delete(id);script.remove();reject(new Error('Could not open the saved observations. Check that the demo/assets folder is present beside this page.'));};
       document.head.appendChild(script);
